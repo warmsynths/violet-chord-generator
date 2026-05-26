@@ -20,8 +20,8 @@ export const EXTENSION_INTERVALS: Record<string, number> = {
 export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
 export const KEYBOARD_MAP: Record<string, number> = {
-  a: 0, s: 2, d: 4, f: 5, g: 7, h: 9, j: 11,
-  w: 1, e: 3, t: 6, y: 8, u: 10,
+  g: 0, h: 2, j: 4, k: 5, l: 7, ';': 9, "'": 11,
+  t: 1, y: 3, i: 6, o: 8, p: 10,
 };
 
 export const WHITE_KEYS = [0, 2, 4, 5, 7, 9, 11];

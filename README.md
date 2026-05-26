@@ -29,20 +29,20 @@ This project is a tribute to the incredible Orchid hardware synthesizer. I could
 ## Keyboard Controls
 
 ### Play Notes
-- **A S D F G H J** — White keys (C D E F G A B)
-- **W E T Y U** — Black keys (C# D# F# G# A#)
+- **G H J K L ; '** — White keys (C D E F G A B)
+- **T Y I O P** — Black keys (C# D# F# G# A#)
 
 ### Chord Modifiers (hold)
-- **1** — Diminished
-- **2** — Minor  
-- **3** — Major
-- **4** — Augmented
+- **Q** — Diminished
+- **W** — Minor  
+- **E** — Major
+- **R** — Sus
 
 ### Extensions (hold)
-- **5** — 6th
-- **6** — Minor 7th
-- **7** — Major 7th
-- **8** — 9th
+- **A** — 6th
+- **S** — Minor 7th
+- **D** — Major 7th
+- **F** — 9th
 
 ### Other Controls
 - **Z / X** — Voicing down/up (cycles inversions)

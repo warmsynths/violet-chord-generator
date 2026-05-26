@@ -29,7 +29,7 @@ export function StartOverlay({ visible, isReopened, onStart, onClose }: StartOve
           <div className="tutorial-row">
             <span className="row-label">Chords</span>
             <div className="modifier-row">
-              {['1', '2', '3', '4'].map((key, i) => (
+              {['Q', 'W', 'E', 'R'].map((key, i) => (
                 <div key={key} className="mod-key">
                   <div className="mod-key-cap">{key}</div>
                   <div className="mod-key-label">{['Dim', 'Min', 'Maj', 'Sus'][i]}</div>
@@ -38,7 +38,7 @@ export function StartOverlay({ visible, isReopened, onStart, onClose }: StartOve
             </div>
             <span className="row-label">Ext</span>
             <div className="modifier-row">
-              {['5', '6', '7', '8'].map((key, i) => (
+              {['A', 'S', 'D', 'F'].map((key, i) => (
                 <div key={key} className="mod-key">
                   <div className="mod-key-cap">{key}</div>
                   <div className="mod-key-label">{['6th', 'm7', 'M7', '9th'][i]}</div>
@@ -52,13 +52,13 @@ export function StartOverlay({ visible, isReopened, onStart, onClose }: StartOve
             <span className="row-label">Notes</span>
             <div className="piano-visual">
               <div className="piano-container">
-                {[['A', 'C'], ['S', 'D'], ['D', 'E'], ['F', 'F'], ['G', 'G'], ['H', 'A'], ['J', 'B']].map(([comp, note]) => (
+                {[['G', 'C'], ['H', 'D'], ['J', 'E'], ['K', 'F'], ['L', 'G'], [';', 'A'], ["'", 'B']].map(([comp, note]) => (
                   <div key={comp} className="piano-white-key">
                     <span className="key-computer">{comp}</span>
                     <span className="key-note">{note}</span>
                   </div>
                 ))}
-                {[['W', 'C#', 25], ['E', 'D#', 62], ['T', 'F#', 137], ['Y', 'G#', 175], ['U', 'A#', 212]].map(([comp, note, left]) => (
+                {[['T', 'C#', 25], ['Y', 'D#', 62], ['I', 'F#', 137], ['O', 'G#', 175], ['P', 'A#', 212]].map(([comp, note, left]) => (
                   <div key={comp as string} className="piano-black-key" style={{ left: `${left}px` }}>
                     <span className="key-computer">{comp}</span>
                     <span className="key-note">{note}</span>
@@ -136,20 +136,20 @@ export function HelpModal({ visible, onClose }: HelpModalProps) {
         <div className="modal-section">
           <h3>Play Notes</h3>
           <ul>
-            <li><kbd>A-J</kbd> White keys (C D E F G A B)</li>
-            <li><kbd>W E T Y U</kbd> Black keys</li>
+            <li><kbd>G H J K L ; '</kbd> White keys (C D E F G A B)</li>
+            <li><kbd>T Y I O P</kbd> Black keys</li>
           </ul>
         </div>
         <div className="modal-section">
           <h3>Chord Types (hold)</h3>
           <ul>
-            <li><kbd>1</kbd> Dim &nbsp; <kbd>2</kbd> Min &nbsp; <kbd>3</kbd> Maj &nbsp; <kbd>4</kbd> Sus</li>
+            <li><kbd>Q</kbd> Dim &nbsp; <kbd>W</kbd> Min &nbsp; <kbd>E</kbd> Maj &nbsp; <kbd>R</kbd> Sus</li>
           </ul>
         </div>
         <div className="modal-section">
           <h3>Extensions (hold)</h3>
           <ul>
-            <li><kbd>5</kbd> 6th &nbsp; <kbd>6</kbd> m7 &nbsp; <kbd>7</kbd> M7 &nbsp; <kbd>8</kbd> 9th</li>
+            <li><kbd>A</kbd> 6th &nbsp; <kbd>S</kbd> m7 &nbsp; <kbd>D</kbd> M7 &nbsp; <kbd>F</kbd> 9th</li>
           </ul>
         </div>
         <div className="modal-section">

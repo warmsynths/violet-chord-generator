@@ -230,17 +230,18 @@ export default function App() {
       }
 
       // Chord type modifiers
-      if (['1', '2', '3', '4'].includes(e.key)) {
-        heldModifiers.current.add(e.key);
-        synthState.setChordType((parseInt(e.key) - 1) as ChordType);
+      const chordMap: Partial<Record<string, ChordType>> = { q: 0, w: 1, e: 2, r: 3 };
+      if (chordMap[key] !== undefined) {
+        heldModifiers.current.add(key);
+        synthState.setChordType(chordMap[key] as ChordType);
         return;
       }
 
       // Extension modifiers
-      const extMap: Record<string, Extension> = { '5': '6', '6': 'm7', '7': 'M7', '8': '9' };
-      if (extMap[e.key]) {
-        heldModifiers.current.add(e.key);
-        synthState.setExtension(extMap[e.key], true);
+      const extMap: Record<string, Extension> = { a: '6', s: 'm7', d: 'M7', f: '9' };
+      if (extMap[key]) {
+        heldModifiers.current.add(key);
+        synthState.setExtension(extMap[key], true);
         return;
       }
 
@@ -320,11 +321,14 @@ export default function App() {
       }
 
       // Chord type modifiers
-      if (['1', '2', '3', '4'].includes(e.key)) {
-        heldModifiers.current.delete(e.key);
-        const heldChordTypes = ['1', '2', '3', '4'].filter(k => heldModifiers.current.has(k));
+      const chordKeys = ['q', 'w', 'e', 'r'];
+      const chordMap: Record<string, ChordType> = { q: 0, w: 1, e: 2, r: 3 };
+      if (chordMap[key] !== undefined) {
+        heldModifiers.current.delete(key);
+        const heldChordTypes = chordKeys.filter(k => heldModifiers.current.has(k));
         if (heldChordTypes.length > 0) {
-          synthState.setChordType((parseInt(heldChordTypes[heldChordTypes.length - 1]) - 1) as ChordType);
+          const lastHeld = heldChordTypes[heldChordTypes.length - 1];
+          synthState.setChordType(chordMap[lastHeld]);
         } else {
           synthState.setChordType(null);
         }
@@ -332,10 +336,10 @@ export default function App() {
       }
 
       // Extension modifiers
-      const extMap: Record<string, Extension> = { '5': '6', '6': 'm7', '7': 'M7', '8': '9' };
-      if (extMap[e.key]) {
-        heldModifiers.current.delete(e.key);
-        synthState.setExtension(extMap[e.key], false);
+      const extMap: Record<string, Extension> = { a: '6', s: 'm7', d: 'M7', f: '9' };
+      if (extMap[key]) {
+        heldModifiers.current.delete(key);
+        synthState.setExtension(extMap[key], false);
         return;
       }
 

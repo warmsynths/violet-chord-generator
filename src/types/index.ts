@@ -2,6 +2,41 @@ export type ChordType = 0 | 1 | 2 | 3 | null; // dim, min, maj, sus
 
 export type Extension = '6' | 'm7' | 'M7' | '9';
 
+export type KeyboardNoteAction =
+  | 'noteC'
+  | 'noteCSharp'
+  | 'noteD'
+  | 'noteDSharp'
+  | 'noteE'
+  | 'noteF'
+  | 'noteFSharp'
+  | 'noteG'
+  | 'noteGSharp'
+  | 'noteA'
+  | 'noteASharp'
+  | 'noteB';
+
+export type KeyboardAction =
+  | KeyboardNoteAction
+  | 'chordDim'
+  | 'chordMin'
+  | 'chordMaj'
+  | 'chordSus'
+  | 'ext6'
+  | 'extm7'
+  | 'extM7'
+  | 'ext9'
+  | 'voicingDown'
+  | 'voicingUp'
+  | 'octaveDown'
+  | 'octaveUp'
+  | 'bpmDown'
+  | 'bpmUp'
+  | 'loopToggle'
+  | 'patternPrev'
+  | 'patternNext'
+  | 'panic';
+
 export type Extensions = Record<Extension, boolean>;
 
 export type BassMode = 'off' | 'unison' | 'single' | 'solo';

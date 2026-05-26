@@ -1,13 +1,53 @@
+import { useEffect, useState } from 'react';
+import {
+  CONTROL_BINDING_ITEMS,
+  MODIFIER_BINDING_ROWS,
+  PIANO_BLACK_BINDINGS,
+  PIANO_WHITE_BINDINGS,
+  formatKeyLabel,
+  normalizeKeyboardKey,
+} from '../constants/keyboard';
+import type { KeyboardAction } from '../types';
 import './Modals.css';
 
 interface StartOverlayProps {
   visible: boolean;
   isReopened: boolean;
+  keyBindings: Record<KeyboardAction, string>;
+  onKeyBindingChange: (action: KeyboardAction, key: string) => void;
   onStart: () => void;
   onClose: () => void;
 }
 
-export function StartOverlay({ visible, isReopened, onStart, onClose }: StartOverlayProps) {
+export function StartOverlay({ visible, isReopened, keyBindings, onKeyBindingChange, onStart, onClose }: StartOverlayProps) {
+  const [listeningAction, setListeningAction] = useState<KeyboardAction | null>(null);
+
+  useEffect(() => {
+    if (!visible) {
+      setListeningAction(null);
+    }
+  }, [visible]);
+
+  useEffect(() => {
+    if (!visible || !listeningAction) return;
+
+    const handleRebind = (e: KeyboardEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (e.key === 'Escape') {
+        setListeningAction(null);
+        return;
+      }
+
+      onKeyBindingChange(listeningAction, normalizeKeyboardKey(e.key));
+      setListeningAction(null);
+    };
+
+    window.addEventListener('keydown', handleRebind, true);
+    return () => window.removeEventListener('keydown', handleRebind, true);
+  }, [visible, listeningAction, onKeyBindingChange]);
+
   if (!visible) return null;
 
   const handleClose = (e: React.MouseEvent) => {
@@ -22,29 +62,31 @@ export function StartOverlay({ visible, isReopened, onStart, onClose }: StartOve
           <button className="tutorial-close" onClick={handleClose}>×</button>
         )}
         <h1>Violet</h1>
+        <div className="tutorial-rebind-hint">Click any key cap to remap. Press Esc to cancel capture.</div>
         
         {/* All controls in one compact card */}
         <div className="tutorial-content">
           {/* Chord Modifiers */}
           <div className="tutorial-row">
-            <span className="row-label">Chords</span>
-            <div className="modifier-row">
-              {['Q', 'W', 'E', 'R'].map((key, i) => (
-                <div key={key} className="mod-key">
-                  <div className="mod-key-cap">{key}</div>
-                  <div className="mod-key-label">{['Dim', 'Min', 'Maj', 'Sus'][i]}</div>
+            {MODIFIER_BINDING_ROWS.map((row) => (
+              <div key={row.label} className="modifier-group">
+                <span className="row-label">{row.label}</span>
+                <div className="modifier-row">
+                  {row.actions.map(({ action, label }) => (
+                    <div key={action} className="mod-key">
+                      <button
+                        type="button"
+                        className={`mod-key-cap rebind-key ${listeningAction === action ? 'is-listening' : ''}`}
+                        onClick={() => setListeningAction(action)}
+                      >
+                        {listeningAction === action ? '...' : formatKeyLabel(keyBindings[action])}
+                      </button>
+                      <div className="mod-key-label">{label}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            <span className="row-label">Ext</span>
-            <div className="modifier-row">
-              {['A', 'S', 'D', 'F'].map((key, i) => (
-                <div key={key} className="mod-key">
-                  <div className="mod-key-cap">{key}</div>
-                  <div className="mod-key-label">{['6th', 'm7', 'M7', '9th'][i]}</div>
-                </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
 
           {/* Piano Keys */}
@@ -52,15 +94,27 @@ export function StartOverlay({ visible, isReopened, onStart, onClose }: StartOve
             <span className="row-label">Notes</span>
             <div className="piano-visual">
               <div className="piano-container">
-                {[['G', 'C'], ['H', 'D'], ['J', 'E'], ['K', 'F'], ['L', 'G'], [';', 'A'], ["'", 'B']].map(([comp, note]) => (
-                  <div key={comp} className="piano-white-key">
-                    <span className="key-computer">{comp}</span>
+                {PIANO_WHITE_BINDINGS.map(({ action, note }) => (
+                  <div key={action} className="piano-white-key">
+                    <button
+                      type="button"
+                      className={`key-computer rebind-key ${listeningAction === action ? 'is-listening' : ''}`}
+                      onClick={() => setListeningAction(action)}
+                    >
+                      {listeningAction === action ? '...' : formatKeyLabel(keyBindings[action])}
+                    </button>
                     <span className="key-note">{note}</span>
                   </div>
                 ))}
-                {[['T', 'C#', 25], ['Y', 'D#', 62], ['I', 'F#', 137], ['O', 'G#', 175], ['P', 'A#', 212]].map(([comp, note, left]) => (
-                  <div key={comp as string} className="piano-black-key" style={{ left: `${left}px` }}>
-                    <span className="key-computer">{comp}</span>
+                {PIANO_BLACK_BINDINGS.map(({ action, note, left }) => (
+                  <div key={action} className="piano-black-key" style={{ left: `${left}px` }}>
+                    <button
+                      type="button"
+                      className={`key-computer rebind-key ${listeningAction === action ? 'is-listening' : ''}`}
+                      onClick={() => setListeningAction(action)}
+                    >
+                      {listeningAction === action ? '...' : formatKeyLabel(keyBindings[action])}
+                    </button>
                     <span className="key-note">{note}</span>
                   </div>
                 ))}
@@ -70,18 +124,18 @@ export function StartOverlay({ visible, isReopened, onStart, onClose }: StartOve
 
           {/* Other Controls - compact grid */}
           <div className="tutorial-row controls-row">
-            {[
-              { keys: ['Z', 'X'], label: 'Voicing' },
-              { keys: ['[', ']'], label: 'Octave' },
-              { keys: ['-', '='], label: 'BPM' },
-              { keys: ['L'], label: 'Loop' },
-              { keys: [',', '.'], label: 'Patterns' },
-              { keys: ['Space'], label: 'Panic' },
-            ].map(({ keys, label }) => (
+            {CONTROL_BINDING_ITEMS.map(({ actions, label }) => (
               <div key={label} className="control-item">
                 <div className="control-keys">
-                  {keys.map(k => (
-                    <span key={k} className="ctrl-key">{k}</span>
+                  {actions.map((action) => (
+                    <button
+                      key={action}
+                      type="button"
+                      className={`ctrl-key rebind-key ${listeningAction === action ? 'is-listening' : ''}`}
+                      onClick={() => setListeningAction(action)}
+                    >
+                      {listeningAction === action ? '...' : formatKeyLabel(keyBindings[action])}
+                    </button>
                   ))}
                 </div>
                 <span className="control-label">{label}</span>
@@ -123,9 +177,12 @@ export function AboutModal({ visible, onClose }: AboutModalProps) {
 interface HelpModalProps {
   visible: boolean;
   onClose: () => void;
+  keyBindings: Record<KeyboardAction, string>;
 }
 
-export function HelpModal({ visible, onClose }: HelpModalProps) {
+export function HelpModal({ visible, onClose, keyBindings }: HelpModalProps) {
+  const keysFor = (actions: KeyboardAction[]) => actions.map((action) => formatKeyLabel(keyBindings[action])).join(' ');
+
   return (
     <div className={`modal-overlay ${visible ? 'visible' : ''}`} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal">
@@ -136,31 +193,31 @@ export function HelpModal({ visible, onClose }: HelpModalProps) {
         <div className="modal-section">
           <h3>Play Notes</h3>
           <ul>
-            <li><kbd>G H J K L ; '</kbd> White keys (C D E F G A B)</li>
-            <li><kbd>T Y I O P</kbd> Black keys</li>
+            <li><kbd>{keysFor(['noteC', 'noteD', 'noteE', 'noteF', 'noteG', 'noteA', 'noteB'])}</kbd> White keys (C D E F G A B)</li>
+            <li><kbd>{keysFor(['noteCSharp', 'noteDSharp', 'noteFSharp', 'noteGSharp', 'noteASharp'])}</kbd> Black keys</li>
           </ul>
         </div>
         <div className="modal-section">
           <h3>Chord Types (hold)</h3>
           <ul>
-            <li><kbd>Q</kbd> Dim &nbsp; <kbd>W</kbd> Min &nbsp; <kbd>E</kbd> Maj &nbsp; <kbd>R</kbd> Sus</li>
+            <li><kbd>{formatKeyLabel(keyBindings.chordDim)}</kbd> Dim &nbsp; <kbd>{formatKeyLabel(keyBindings.chordMin)}</kbd> Min &nbsp; <kbd>{formatKeyLabel(keyBindings.chordMaj)}</kbd> Maj &nbsp; <kbd>{formatKeyLabel(keyBindings.chordSus)}</kbd> Aug</li>
           </ul>
         </div>
         <div className="modal-section">
           <h3>Extensions (hold)</h3>
           <ul>
-            <li><kbd>A</kbd> 6th &nbsp; <kbd>S</kbd> m7 &nbsp; <kbd>D</kbd> M7 &nbsp; <kbd>F</kbd> 9th</li>
+            <li><kbd>{formatKeyLabel(keyBindings.ext6)}</kbd> 6th &nbsp; <kbd>{formatKeyLabel(keyBindings.extm7)}</kbd> m7 &nbsp; <kbd>{formatKeyLabel(keyBindings.extM7)}</kbd> M7 &nbsp; <kbd>{formatKeyLabel(keyBindings.ext9)}</kbd> 9th</li>
           </ul>
         </div>
         <div className="modal-section">
           <h3>Controls</h3>
           <ul>
-            <li><kbd>Z X</kbd> Voicing (0-60)</li>
-            <li><kbd>[ ]</kbd> Octave</li>
-            <li><kbd>- =</kbd> BPM</li>
-            <li><kbd>L</kbd> Toggle Loop</li>
-            <li><kbd>, .</kbd> Drum Pattern</li>
-            <li><kbd>Space</kbd> Panic</li>
+            <li><kbd>{keysFor(['voicingDown', 'voicingUp'])}</kbd> Voicing (0-60)</li>
+            <li><kbd>{keysFor(['octaveDown', 'octaveUp'])}</kbd> Octave</li>
+            <li><kbd>{keysFor(['bpmDown', 'bpmUp'])}</kbd> BPM</li>
+            <li><kbd>{formatKeyLabel(keyBindings.loopToggle)}</kbd> Toggle Loop</li>
+            <li><kbd>{keysFor(['patternPrev', 'patternNext'])}</kbd> Drum Pattern</li>
+            <li><kbd>{formatKeyLabel(keyBindings.panic)}</kbd> Panic</li>
           </ul>
         </div>
       </div>

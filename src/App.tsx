@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Device } from './components/Device';
 import { StartOverlay, AboutModal, HelpModal, RotateOverlay } from './components/Modals';
 import { MidiMappingModal } from './components/MidiMappingModal';
@@ -7,8 +7,16 @@ import { useDrums } from './hooks/useDrums';
 import { useMidi } from './hooks/useMidi';
 import { useMidiMapping } from './hooks/useMidiMapping';
 import { useSynthState } from './hooks/useSynthState';
-import { KEYBOARD_MAP } from './constants/music';
-import type { ChordType, Extension, MidiMappableAction } from './types';
+import {
+  CHORD_ACTIONS,
+  CHORD_ACTION_TO_TYPE,
+  EXT_ACTION_TO_EXTENSION,
+  NOTE_ACTION_TO_SEMITONE,
+  loadKeyBindings,
+  normalizeKeyboardKey,
+  saveKeyBindings,
+} from './constants/keyboard';
+import type { KeyboardAction, KeyboardNoteAction, MidiMappableAction } from './types';
 import './App.css';
 
 export default function App() {
@@ -17,12 +25,13 @@ export default function App() {
   const [showAbout, setShowAbout] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
   const [showMidiMapping, setShowMidiMapping] = useState(false);
+  const [keyBindings, setKeyBindings] = useState<Record<KeyboardAction, string>>(() => loadKeyBindings());
   const [effects, setEffects] = useState({ reverb: 0, delay: 0, chorus: 0, drive: 0, master: 80 });
   const [pressedMidiNotes, setPressedMidiNotes] = useState<number[]>([]);
   
   const heldNotes = useRef<Set<string>>(new Set());
   const heldMidiNotes = useRef<Set<number>>(new Set()); // Track MIDI notes being held
-  const heldModifiers = useRef<Set<string>>(new Set());
+  const heldModifiers = useRef<Set<KeyboardAction>>(new Set());
   const heldMidiMappings = useRef<Set<MidiMappableAction>>(new Set());
   const voicingInterval = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -213,15 +222,55 @@ export default function App() {
     setIsStartReopened(true);
   }, []);
 
+  const actionByKey = useMemo(() => {
+    const map: Partial<Record<string, KeyboardAction>> = {};
+    (Object.keys(keyBindings) as KeyboardAction[]).forEach((action) => {
+      map[keyBindings[action]] = action;
+    });
+    return map;
+  }, [keyBindings]);
+
+  const updateKeyBinding = useCallback((action: KeyboardAction, key: string) => {
+    const normalizedKey = normalizeKeyboardKey(key);
+    setKeyBindings((prev) => {
+      const currentKey = prev[action];
+      if (!normalizedKey || currentKey === normalizedKey) {
+        return prev;
+      }
+
+      const next = { ...prev };
+      const conflictAction = (Object.keys(next) as KeyboardAction[]).find(
+        (candidate) => candidate !== action && next[candidate] === normalizedKey
+      );
+
+      if (conflictAction) {
+        next[conflictAction] = currentKey;
+      }
+
+      next[action] = normalizedKey;
+      saveKeyBindings(next);
+      return next;
+    });
+  }, []);
+
   // Keyboard handling
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (showStart) return;
       if (e.repeat) return;
-      const key = e.key.toLowerCase();
+      const key = normalizeKeyboardKey(e.key);
+
+      if (e.key === 'Escape') {
+        setShowHelp(false);
+        return;
+      }
+
+      const action = actionByKey[key];
+      if (!action) return;
 
       // Note keys
-      if (KEYBOARD_MAP[key] !== undefined) {
-        const note = (synthState.octave + 1) * 12 + KEYBOARD_MAP[key];
+      if (action in NOTE_ACTION_TO_SEMITONE) {
+        const note = (synthState.octave + 1) * 12 + NOTE_ACTION_TO_SEMITONE[action as KeyboardNoteAction];
         if (!heldNotes.current.has(key)) {
           heldNotes.current.add(key);
           handleNoteOn(note);
@@ -230,29 +279,27 @@ export default function App() {
       }
 
       // Chord type modifiers
-      const chordMap: Partial<Record<string, ChordType>> = { q: 0, w: 1, e: 2, r: 3 };
-      if (chordMap[key] !== undefined) {
-        heldModifiers.current.add(key);
-        synthState.setChordType(chordMap[key] as ChordType);
+      if (action in CHORD_ACTION_TO_TYPE) {
+        heldModifiers.current.add(action);
+        synthState.setChordType(CHORD_ACTION_TO_TYPE[action as keyof typeof CHORD_ACTION_TO_TYPE]);
         return;
       }
 
       // Extension modifiers
-      const extMap: Record<string, Extension> = { a: '6', s: 'm7', d: 'M7', f: '9' };
-      if (extMap[key]) {
-        heldModifiers.current.add(key);
-        synthState.setExtension(extMap[key], true);
+      if (action in EXT_ACTION_TO_EXTENSION) {
+        heldModifiers.current.add(action);
+        synthState.setExtension(EXT_ACTION_TO_EXTENSION[action as keyof typeof EXT_ACTION_TO_EXTENSION], true);
         return;
       }
 
       // Voicing
-      if (key === 'x' && !voicingInterval.current) {
+      if (action === 'voicingUp' && !voicingInterval.current) {
         const stepUp = () => synthState.setVoicing(synthState.voicing + 1);
         stepUp();
         voicingInterval.current = setInterval(stepUp, 1000);
         return;
       }
-      if (key === 'z' && !voicingInterval.current) {
+      if (action === 'voicingDown' && !voicingInterval.current) {
         const stepDown = () => synthState.setVoicing(synthState.voicing - 1);
         stepDown();
         voicingInterval.current = setInterval(stepDown, 1000);
@@ -260,17 +307,17 @@ export default function App() {
       }
 
       // Octave
-      if (e.key === '[') { synthState.setOctave(synthState.octave - 1); return; }
-      if (e.key === ']') { synthState.setOctave(synthState.octave + 1); return; }
+      if (action === 'octaveDown') { synthState.setOctave(synthState.octave - 1); return; }
+      if (action === 'octaveUp') { synthState.setOctave(synthState.octave + 1); return; }
 
       // BPM
-      if (e.key === '-') {
+      if (action === 'bpmDown') {
         synthState.setBpm(synthState.bpm - 5);
         audio.setBpm(synthState.bpm - 5);
         if (drums.isPlaying) drums.startLoop(synthState.bpm - 5);
         return;
       }
-      if (e.key === '=') {
+      if (action === 'bpmUp') {
         synthState.setBpm(synthState.bpm + 5);
         audio.setBpm(synthState.bpm + 5);
         if (drums.isPlaying) drums.startLoop(synthState.bpm + 5);
@@ -278,7 +325,7 @@ export default function App() {
       }
 
       // Loop
-      if (key === 'l') {
+      if (action === 'loopToggle') {
         if (drums.isPlaying) {
           drums.stop();
         } else {
@@ -289,11 +336,11 @@ export default function App() {
       }
 
       // Drum patterns
-      if (key === ',') { drums.cyclePattern(-1); return; }
-      if (key === '.') { drums.cyclePattern(1); return; }
+      if (action === 'patternPrev') { drums.cyclePattern(-1); return; }
+      if (action === 'patternNext') { drums.cyclePattern(1); return; }
 
       // Panic
-      if (e.key === ' ') {
+      if (action === 'panic') {
         e.preventDefault();
         audio.panic();
         drums.stop();
@@ -302,33 +349,28 @@ export default function App() {
         setChordDisplay({ notes: [], name: '' });
         return;
       }
-
-      // Escape
-      if (e.key === 'Escape') {
-        setShowHelp(false);
-        return;
-      }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      const key = e.key.toLowerCase();
+      if (showStart) return;
+      const key = normalizeKeyboardKey(e.key);
+      const action = actionByKey[key];
+      if (!action) return;
 
       // Note keys
-      if (KEYBOARD_MAP[key] !== undefined) {
+      if (action in NOTE_ACTION_TO_SEMITONE) {
         heldNotes.current.delete(key);
-        handleNoteOff((synthState.octave + 1) * 12 + KEYBOARD_MAP[key]);
+        handleNoteOff((synthState.octave + 1) * 12 + NOTE_ACTION_TO_SEMITONE[action as KeyboardNoteAction]);
         return;
       }
 
       // Chord type modifiers
-      const chordKeys = ['q', 'w', 'e', 'r'];
-      const chordMap: Record<string, ChordType> = { q: 0, w: 1, e: 2, r: 3 };
-      if (chordMap[key] !== undefined) {
-        heldModifiers.current.delete(key);
-        const heldChordTypes = chordKeys.filter(k => heldModifiers.current.has(k));
+      if (action in CHORD_ACTION_TO_TYPE) {
+        heldModifiers.current.delete(action);
+        const heldChordTypes = CHORD_ACTIONS.filter((chordAction) => heldModifiers.current.has(chordAction));
         if (heldChordTypes.length > 0) {
           const lastHeld = heldChordTypes[heldChordTypes.length - 1];
-          synthState.setChordType(chordMap[lastHeld]);
+          synthState.setChordType(CHORD_ACTION_TO_TYPE[lastHeld]);
         } else {
           synthState.setChordType(null);
         }
@@ -336,15 +378,14 @@ export default function App() {
       }
 
       // Extension modifiers
-      const extMap: Record<string, Extension> = { a: '6', s: 'm7', d: 'M7', f: '9' };
-      if (extMap[key]) {
-        heldModifiers.current.delete(key);
-        synthState.setExtension(extMap[key], false);
+      if (action in EXT_ACTION_TO_EXTENSION) {
+        heldModifiers.current.delete(action);
+        synthState.setExtension(EXT_ACTION_TO_EXTENSION[action as keyof typeof EXT_ACTION_TO_EXTENSION], false);
         return;
       }
 
       // Voicing
-      if (key === 'z' || key === 'x') {
+      if (action === 'voicingDown' || action === 'voicingUp') {
         if (voicingInterval.current) {
           clearInterval(voicingInterval.current);
           voicingInterval.current = null;
@@ -359,7 +400,7 @@ export default function App() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [synthState, audio, drums, handleNoteOn, handleNoteOff]);
+  }, [showStart, actionByKey, synthState, audio, drums, handleNoteOn, handleNoteOff]);
 
   const chordNotesDisplay = chordDisplay.notes.map(n => audio.midiToNoteName(n)).join(' · ');
   
@@ -384,12 +425,14 @@ export default function App() {
       <StartOverlay
         visible={showStart}
         isReopened={isStartReopened}
+        keyBindings={keyBindings}
+        onKeyBindingChange={updateKeyBinding}
         onStart={handleStart}
         onClose={() => { setShowStart(false); setIsStartReopened(false); }}
       />
 
       <AboutModal visible={showAbout} onClose={() => setShowAbout(false)} />
-      <HelpModal visible={showHelp} onClose={() => setShowHelp(false)} />
+      <HelpModal visible={showHelp} onClose={() => setShowHelp(false)} keyBindings={keyBindings} />
       <MidiMappingModal
         visible={showMidiMapping}
         enabled={midiMapping.config.enabled}

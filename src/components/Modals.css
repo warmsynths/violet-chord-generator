@@ -29,6 +29,13 @@
   margin: 0 0 20px 0;
 }
 
+.tutorial-rebind-hint {
+  text-align: center;
+  font-size: 0.7rem;
+  color: #8d8d8d;
+  margin: -8px 0 14px;
+}
+
 .tutorial-close {
   position: absolute;
   top: 16px;
@@ -66,6 +73,12 @@
   justify-content: center;
 }
 
+.modifier-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .row-label {
   font-size: 0.65rem;
   color: #e8a832;
@@ -92,6 +105,7 @@
   width: 36px;
   height: 36px;
   background: linear-gradient(180deg, #e8a832 0%, #c89028 100%);
+  border: none;
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -100,6 +114,19 @@
   font-size: 0.9rem;
   color: #1a1a1a;
   box-shadow: 0 2px 6px rgba(232, 168, 50, 0.3);
+}
+
+.rebind-key {
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.rebind-key:hover {
+  transform: translateY(-1px);
+}
+
+.rebind-key.is-listening {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4), 0 0 14px rgba(232, 168, 50, 0.5);
 }
 
 .mod-key-label {
@@ -161,6 +188,9 @@
 }
 
 .key-computer {
+  border: none;
+  background: transparent;
+  padding: 0;
   font-weight: 700;
   font-size: 0.8rem;
   color: #fff;
